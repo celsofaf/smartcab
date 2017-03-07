@@ -18,6 +18,9 @@ class LearningAgent(Agent):
         self.Q = dict()          # Create a Q-table which will be a dictionary of tuples
         self.epsilon = epsilon   # Random exploration factor
         self.alpha = alpha       # Learning factor
+        
+        # Register the number of training trials
+        self.trials = 0
 
         ###########
         ## TO DO ##
@@ -40,12 +43,16 @@ class LearningAgent(Agent):
         # Update additional class parameters as needed
         # If 'testing' is True, set epsilon and alpha to 0
         
+        def sigmoid(x):
+            return 1 / (1 + math.exp(x))
+        
         if testing:
             self.epsilon = 0
             self.alpha = 0
         else:
-            self.epsilon = self.epsilon - 0.05
-
+            self.trials = self.trials + 1
+            self.epsilon = (sigmoid(self.trials/1.5 - 7) + 0.053) * 0.91
+            
         return None
 
     def build_state(self):
@@ -131,7 +138,7 @@ class LearningAgent(Agent):
         #   Otherwise, choose an action with the highest Q-value for the current state
         
         if self.learning:
-            if random.random() <= self.epsilon:
+            if random.random() < self.epsilon:
                 action = random.choice(self.valid_actions)
             else:
                 actionsQ = self.Q[state]
@@ -211,7 +218,7 @@ def run():
     #   display      - set to False to disable the GUI if PyGame is enabled
     #   log_metrics  - set to True to log trial and simulation results to /logs
     #   optimized    - set to True to change the default log file name
-    sim = Simulator(env, update_delay=0.1, log_metrics=True, display=False)
+    sim = Simulator(env, update_delay=1.0, log_metrics=True, display=False, optimized=True)
     
     ##############
     # Run the simulator
