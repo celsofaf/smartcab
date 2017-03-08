@@ -51,8 +51,7 @@ class LearningAgent(Agent):
             self.alpha = 0
         else:
             self.trials = self.trials + 1
-            self.epsilon = sigmoid(self.trials/125.0 - 4) * 0.98 + 0.0323
-#            self.epsilon = self.epsilon - 0.05
+            self.epsilon = (sigmoid(self.trials/1.5 - 7) + 0.053) * 0.91
             
         return None
 
@@ -71,24 +70,19 @@ class LearningAgent(Agent):
         ###########
         # Set 'state' as a tuple of relevant data for the agent  
         
-        state = (waypoint, inputs['light'], inputs['left'], inputs['oncoming'], inputs['right'])
+        if inputs['light'] == 'red':
+            if inputs['left'] == None:
+                statestring = 'left is None'
+            else:
+                statestring = 'left is something'
+        else:  # light is green
+            if inputs['oncoming'] in ['forward', 'right']:
+                statestring = 'oncoming is forward/right'
+            else:
+                statestring = 'oncoming is left/None'
         
-        # commented out my state building from 1st submission as, unfortunately, I was told not to
-        # use feature engineering...
-        
-#        if inputs['light'] == 'red':
-#            if inputs['left'] == None:
-#                statestring = 'left is None'
-#            else:
-#                statestring = 'left is something'
-#        else:  # light is green
-#            if inputs['oncoming'] in ['forward', 'right']:
-#                statestring = 'oncoming is forward/right'
-#            else:
-#                statestring = 'oncoming is left/None'
-#        
-#        statestring = inputs['light'] + ' + ' + statestring
-#        state = (waypoint, statestring)
+        statestring = inputs['light'] + ' + ' + statestring
+        state = (waypoint, statestring)
 
         return state
 
@@ -117,7 +111,6 @@ class LearningAgent(Agent):
         # If it is not, create a new dictionary for that state
         #   Then, for each action available, set the initial Q-value to 0.0
         
-       
         if state not in self.Q:
             statedic = {}
             for action in self.valid_actions:
@@ -144,15 +137,12 @@ class LearningAgent(Agent):
         # When learning, choose a random action with 'epsilon' probability
         #   Otherwise, choose an action with the highest Q-value for the current state
         
-        # If there are 2 or more actions with same highest Q-value, will randomly choose from them
-        
         if self.learning:
             if random.random() < self.epsilon:
                 action = random.choice(self.valid_actions)
             else:
                 actionsQ = self.Q[state]
-                actions = [act for act in actionsQ if actionsQ[act] == self.get_maxQ(actionsQ)]
-                action = random.choice(actions)  # choose amongst actions with highest Q-value
+                action = max(actionsQ, key=actionsQ.get)  # action with highest Q-value
         else:
             action = random.choice(self.valid_actions)
  
@@ -170,13 +160,10 @@ class LearningAgent(Agent):
         # When learning, implement the value iteration update rule
         #   Use only the learning rate 'alpha' (do not use the discount factor 'gamma')
 
-        # stateQ[action] = stateQ[action] + alpha*(reward + gamma*maxQ(estimate_of_optimal_future_value)-stateQ[action])
-        # no gamma here (gamma = 0), so:
-        # stateQ[action] = stateQ[action] + alpha * (reward - stateQ[action])
-        
+        # Q[s][a] = (1 - alpha) * Q[s][a] + alpha * (reward + max(Q[s'][a'])) 
         alpha = self.alpha
         stateQ = self.Q[state].copy()  # for some brevity
-        stateQ[action] = stateQ[action] + alpha * (reward - stateQ[action])
+        stateQ[action] = (1 - alpha) * stateQ[action] + alpha * (reward + self.get_maxQ(stateQ))
         self.Q[state] = stateQ.copy()
         
         return None
@@ -231,7 +218,7 @@ def run():
     #   display      - set to False to disable the GUI if PyGame is enabled
     #   log_metrics  - set to True to log trial and simulation results to /logs
     #   optimized    - set to True to change the default log file name
-    sim = Simulator(env, update_delay=0.01, log_metrics=True, display=False, optimized=True)
+    sim = Simulator(env, update_delay=1.0, log_metrics=True, display=False, optimized=True)
     
     ##############
     # Run the simulator
